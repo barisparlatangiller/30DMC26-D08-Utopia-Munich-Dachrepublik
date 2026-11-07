@@ -10,7 +10,7 @@ import path from "node:path";
 // a small static server that answers HTTP Range requests (the building tiles are a .pmtiles file read in ranges)
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".geojson": "application/geo+json" };
 http.createServer((req, res) => {
-  const u = decodeURIComponent(new URL(req.url, "http://x").pathname);
+  const u = decodeURIComponent(new globalThis.URL(req.url, "http://x").pathname);
   let f = path.join("docs", u.endsWith("/") ? u + "index.html" : u);
   if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); }
   const size = fs.statSync(f).size, type = TYPES[path.extname(f)] || "application/octet-stream";

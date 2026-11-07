@@ -95,7 +95,7 @@ jobs:
           node pipeline/video.mjs 2>&1 | tee video.log
       - name: Push to media branch
         run: |
-          mkdir -p /tmp/m && cp media/* /tmp/m/
+          mkdir -p /tmp/m && cp media/*.mp4 media/*.png media/*.jpg /tmp/m/
           cd /tmp/m && git init -q -b media && git config user.name Claude && git config user.email noreply@anthropic.com
           git add . && git commit -qm "Rendered video ($(date -u +%F))"
           git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" media

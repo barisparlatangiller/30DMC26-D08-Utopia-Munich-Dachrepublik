@@ -192,8 +192,10 @@ function paint() {
 }
 // show only the first k placements (used by the video renderer)
 function reveal(k) {
-  const m = S.map, R = S.sim.roofs, on = new Set(S.order.slice(0, k));
-  for (let r = 0; r < R.bid.length; r++) m.setFeatureState({ source: "b", sourceLayer: "b", id: R.bid[r] }, { f: on.has(r) ? S.assign[r] : -1 });
+  const m = S.map, R = S.sim.roofs, set = (r, f) => m.setFeatureState({ source: "b", sourceLayer: "b", id: R.bid[r] }, { f });
+  if (S._rk === undefined || k < S._rk) { for (let r = 0; r < R.bid.length; r++) set(r, -1); S._rk = 0; }
+  for (let i = S._rk; i < k; i++) set(S.order[i], S.assign[S.order[i]]);   // only the newly placed roofs change
+  S._rk = k;
 }
 function roofColor() {
   const ids = S.F.map(f => f.id);

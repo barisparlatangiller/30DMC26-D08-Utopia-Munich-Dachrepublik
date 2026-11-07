@@ -29,9 +29,9 @@ const URL = process.env.URL || "http://localhost:8000/";
 const OUT = "media", FR = "media/frames", FPS = 15;
 fs.mkdirSync(FR, { recursive: true });
 for (const f of fs.readdirSync(FR)) fs.unlinkSync(`${FR}/${f}`);
-const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--disable-dev-shm-usage"] });
 const ready = p => p.waitForFunction(() => typeof S !== "undefined" && S.res && S.map && S.map.getLayer("b3"), null, { timeout: 120000 });
-const idle = p => p.evaluate(() => new Promise(r => { S.map.once("idle", r); S.map.triggerRepaint(); setTimeout(r, 1200); }));
+const idle = p => p.evaluate(() => new Promise(r => { S.map.once("render", () => setTimeout(r, 30)); S.map.triggerRepaint(); setTimeout(r, 4000); }));
 
 // hub thumbnail: the page as it opens
 {

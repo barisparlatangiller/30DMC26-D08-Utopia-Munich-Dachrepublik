@@ -11,12 +11,14 @@ fs.mkdirSync(FR, { recursive: true });
 for (const f of fs.readdirSync(FR)) fs.unlinkSync(`${FR}/${f}`);
 const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 const ready = p => p.waitForFunction(() => typeof S !== "undefined" && S.res && S.map && S.map.getLayer("b3"), null, { timeout: 120000 });
-const idle = p => p.evaluate(() => new Promise(r => { S.map.once("idle", r); S.map.triggerRepaint(); setTimeout(r, 2500); }));
+const idle = p => p.evaluate(() => new Promise(r => { S.map.once("idle", r); S.map.triggerRepaint(); setTimeout(r, 1200); }));
 
 // hub thumbnail: the page as it opens
 {
   const p = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  p.on("console", m => m.type() === "error" && console.log("console:", m.text()));
   await p.goto(URL, { waitUntil: "networkidle" }); await ready(p);
+  console.log("page ready", new Date().toISOString());
   await p.waitForFunction(() => S.map.loaded() && S.map.areTilesLoaded(), null, { timeout: 120000 }).catch(() => {});
   await p.waitForTimeout(3000);
   await p.screenshot({ path: `${OUT}/thumb_full.jpg`, type: "jpeg", quality: 88 });
@@ -61,6 +63,7 @@ const info = await page.evaluate(() => {
 await page.waitForFunction(() => S.map.loaded() && S.map.areTilesLoaded(), null, { timeout: 120000 }).catch(() => {});
 await page.waitForTimeout(4000);
 
+console.log("video page ready", new Date().toISOString(), JSON.stringify({ n: info.n, gained: info.gained }));
 let n = 0, bearing = -40;
 const shot = async () => { await page.screenshot({ path: `${FR}/f${String(n).padStart(4, "0")}.png` }); n++; };
 const step = async (k, label) => {
@@ -75,6 +78,7 @@ const step = async (k, label) => {
   }, { k, bearing, label });
   await idle(page);
   await shot();
+  if (n % 20 === 0) console.log("frame", n, new Date().toISOString());
 };
 for (let i = 0; i < 12; i++) await step(0);                                   // 0.8 s: grey roofs
 const FILL = 130;                                                             // ≈ 8.7 s of filling

@@ -1,7 +1,7 @@
 /* Die Dachrepublik · Munich centre · #30DayMapChallenge 2026 Day 8 (Utopia) */
 const COL = { play: "#f0a43a", sport: "#e2603f", garden: "#8cbf3f", park: "#2f9e8a", cinema: "#8a6bc1",
   social: "#e783a7", quiet: "#4f8bd0", pv: "#27405f" };
-const FREE = "#d8d1c3", BASE = "#ecebe8", PITCHED = "#8fa5bd";
+const FREE = "#d9d2c4", BASE = "#f1efeb", BODY = "#ebe8e3", PITCHED = "#c3d2e1";
 const RAMP = ["#f4f1ea", "#fbe3c4", "#f8c58f", "#f1a160", "#e3793d", "#c9552a", "#a33b1d", "#7a2812"];
 const $ = s => document.querySelector(s);
 const fmt = n => Math.round(n).toLocaleString("en-GB");
@@ -89,12 +89,14 @@ function simulate() {
     assign[r] = pvi; pvFlat += R.net[r]; pvRoofs++; pvKwh += kwh(R.net[r]); order.push(r);
   }
   // results, people counted once
-  let gained = 0, gapB = 0, gapA = 0;
+  let gained = 0, allB = 0, allA = 0;
   const missB = new Uint8Array(nC), missA = new Uint8Array(nC);
   for (let c = 0; c < nC; c++) {
     let g = false;
     for (const s of st) { if (!s.before[c]) missB[c]++; if (!s.after[c]) missA[c]++; if (s.after[c] && !s.before[c]) g = true; }
     if (g) gained += C.pop[c];
+    if (!missB[c]) allB += C.pop[c];
+    if (!missA[c]) allA += C.pop[c];
   }
   const rows = st.map(s => {
     let pb = 0, pa = 0, tot = 0;
@@ -106,7 +108,7 @@ function simulate() {
   const usedRoofs = [...assign].filter(a => a >= 0).length;
   const usedM2 = rows.reduce((a, r) => a + r.m2, 0) + pvFlat;
   S.assign = assign; S.missB = missB; S.missA = missA; S.order = order;
-  S.res = { rows, gained, residents, harvest, people_fed: harvest / P.veg_need_kg, pvKwh, target, pvFlat, pvRoofs,
+  S.res = { rows, gained, allB, allA, residents, harvest, people_fed: harvest / P.veg_need_kg, pvKwh, target, pvFlat, pvRoofs,
     usedRoofs, freeRoofs: nR - usedRoofs, usedM2, freeM2: totNet - usedM2, totNet, nR };
   return S.res;
 }
@@ -142,6 +144,7 @@ function run() {
   const pct = x => `${Math.round(x * 100)} %`;
   $("#kpis").innerHTML = `
     <div class="kpi wide"><b>${fmt(r.gained)}</b><span>residents gain walking access to at least one new public roof use<br>of ${fmt(r.residents)} living in the centre (each person counted once)</span></div>
+    <div class="kpi wide"><b>${pct(r.allB / r.residents)} → ${pct(r.allA / r.residents)}</b><span>of residents have all 7 public uses within walking distance, today → in the Dachrepublik</span></div>
     <div class="kpi"><b>${fmt(r.usedRoofs)}</b><span>roofs used, ${fmt(r.usedM2 / 1000)}k m²</span></div>
     <div class="kpi"><b>${fmt(r.freeRoofs)}</b><span>flat roofs stay free: need already met (${pct(r.freeM2 / r.totNet)} of the area)</span></div>
     <div class="kpi"><b>${fmt(r.harvest / 1000)} t</b><span>vegetables & fruit a season, enough for ${fmt(r.people_fed)} people</span></div>
@@ -205,7 +208,7 @@ function setView(v) {
   const m = S.map;
   m.setLayoutProperty("cells", "visibility", v === "roofs" ? "none" : "visible");
   m.setPaintProperty("cells", "fill-color", ["interpolate", ["linear"], ["coalesce", ["feature-state", v === "need" ? "b" : "a"], 0], ...RAMP.flatMap((c, i) => [i, c])]);
-  m.setPaintProperty("b3", "fill-extrusion-opacity", v === "roofs" ? 0.96 : 0.55);
+  m.setPaintProperty("b3", "fill-extrusion-opacity", v === "roofs" ? 0.97 : 0.5); m.setPaintProperty("body", "fill-extrusion-opacity", v === "roofs" ? 0.97 : 0.45);
   legend();
 }
 
@@ -225,10 +228,14 @@ async function init() {
       map.addSource("cells", { type: "geojson", data: "data/cells.geojson?v=1", promoteId: "i" });
       map.addLayer({ id: "cells", type: "fill", source: "cells", layout: { visibility: "none" }, paint: { "fill-color": RAMP[0], "fill-opacity": 0.75 } }, sym);
       map.addSource("b", { type: "vector", url: `pmtiles://${location.href.replace(/[^/]*$/, "")}data/buildings.pmtiles?v=${S.stats.build}`, promoteId: "bid" });
+      map.addLayer({ id: "body", type: "fill-extrusion", source: "b", "source-layer": "b", minzoom: 12, paint: {
+        "fill-extrusion-color": BODY, "fill-extrusion-height": ["max", 0, ["-", ["get", "h"], 0.9]], "fill-extrusion-base": 0,
+        "fill-extrusion-opacity": 0.97, "fill-extrusion-vertical-gradient": true } });
+      // the roof itself: a thin slab on top of every building, coloured by its use
       map.addLayer({ id: "b3", type: "fill-extrusion", source: "b", "source-layer": "b", minzoom: 12, paint: {
-        "fill-extrusion-color": roofColor(), "fill-extrusion-height": ["get", "h"], "fill-extrusion-base": 0,
-        "fill-extrusion-opacity": 0.96, "fill-extrusion-vertical-gradient": true } });
-      for (const l of map.getStyle().layers) if (/building/.test(l.id) && l.id !== "b3") map.setLayoutProperty(l.id, "visibility", "none");
+        "fill-extrusion-color": roofColor(), "fill-extrusion-height": ["get", "h"], "fill-extrusion-base": ["max", 0, ["-", ["get", "h"], 0.9]],
+        "fill-extrusion-opacity": 0.97, "fill-extrusion-vertical-gradient": false } });
+      for (const l of map.getStyle().layers) if (/building/.test(l.id) && l.id !== "b3" && l.id !== "body") map.setLayoutProperty(l.id, "visibility", "none");
       map.on("sourcedata", e => { if (e.sourceId === "b" && e.isSourceLoaded) paint(); });
       map.on("click", "b3", e => {
         const p = e.features[0].properties, st = e.features[0].state || {};

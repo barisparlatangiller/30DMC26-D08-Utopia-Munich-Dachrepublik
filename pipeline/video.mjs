@@ -4,6 +4,26 @@
 import { chromium } from "playwright";
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
+import http from "node:http";
+import path from "node:path";
+
+// a small static server that answers HTTP Range requests (the building tiles are a .pmtiles file read in ranges)
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".geojson": "application/geo+json" };
+http.createServer((req, res) => {
+  const u = decodeURIComponent(new URL(req.url, "http://x").pathname);
+  let f = path.join("docs", u.endsWith("/") ? u + "index.html" : u);
+  if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); }
+  const size = fs.statSync(f).size, type = TYPES[path.extname(f)] || "application/octet-stream";
+  const m = /bytes=(\d+)-(\d*)/.exec(req.headers.range || "");
+  if (m) {
+    const a = +m[1], b = m[2] ? Math.min(+m[2], size - 1) : size - 1;
+    res.writeHead(206, { "Content-Type": type, "Content-Length": b - a + 1, "Content-Range": `bytes ${a}-${b}/${size}`, "Accept-Ranges": "bytes" });
+    fs.createReadStream(f, { start: a, end: b }).pipe(res);
+  } else {
+    res.writeHead(200, { "Content-Type": type, "Content-Length": size, "Accept-Ranges": "bytes" });
+    fs.createReadStream(f).pipe(res);
+  }
+}).listen(8000);
 
 const URL = process.env.URL || "http://localhost:8000/";
 const OUT = "media", FR = "media/frames", FPS = 15;
@@ -21,6 +41,7 @@ const idle = p => p.evaluate(() => new Promise(r => { S.map.once("idle", r); S.m
   console.log("page ready", new Date().toISOString());
   await p.waitForFunction(() => S.map.loaded() && S.map.areTilesLoaded(), null, { timeout: 120000 }).catch(() => {});
   await p.waitForTimeout(3000);
+  console.log("buildings rendered:", await p.evaluate(() => S.map.queryRenderedFeatures({ layers: ["b3"] }).length));
   await p.screenshot({ path: `${OUT}/thumb_full.jpg`, type: "jpeg", quality: 88 });
   await p.close();
 }
@@ -101,3 +122,4 @@ execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "
   "-movflags", "+faststart", `${OUT}/day8_dachrepublik.mp4`]);
 console.log(`${n} frames, ${(n / FPS).toFixed(1)} s, ${(fs.statSync(`${OUT}/day8_dachrepublik.mp4`).size / 1e6).toFixed(2)} MB`, JSON.stringify({ ...info, fn: undefined }));
 fs.rmSync(FR, { recursive: true });
+process.exit(0);

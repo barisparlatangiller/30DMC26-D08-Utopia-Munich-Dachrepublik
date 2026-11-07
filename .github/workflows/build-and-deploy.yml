@@ -92,8 +92,6 @@ jobs:
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q ffmpeg > /dev/null
           npm i --no-save playwright@1.48.2 > /dev/null && npx playwright install --with-deps chromium > /dev/null
-          python3 -m http.server -d docs 8000 > /dev/null 2>&1 &
-          sleep 2
           node pipeline/video.mjs 2>&1 | tee video.log
       - name: Push to media branch
         run: |

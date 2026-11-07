@@ -1,0 +1,67 @@
+name: Build Dachrepublik and deploy
+
+# Boundary + OSM → Bayern LoD2 roofs → Zensus 2022 grid → walking distances → web layers → GitHub Pages.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install tools
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q tippecanoe
+          pip install -r requirements.txt
+          mkdir -p logs input build docs/data
+      - name: Cache downloads (LoD2 tiles, Zensus grid)
+        uses: actions/cache@v4
+        with:
+          path: |
+            input/lod2
+            input/*.zip
+          key: munich-centre-v1
+      - name: Boundary and OpenStreetMap
+        run: python pipeline/a_boundary_osm.py 2>&1 | tee logs/a.log; test ${PIPESTATUS[0]} -eq 0
+      - name: LoD2 roofs
+        run: python pipeline/b_lod2.py 2>&1 | tee logs/b.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Zensus 2022
+        run: python pipeline/c_zensus.py 2>&1 | tee logs/c.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Walking distances
+        run: python pipeline/d_network.py 2>&1 | tee logs/d.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Web layers
+        run: python pipeline/e_web.py 2>&1 | tee logs/e.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Summary
+        if: always()
+        run: |
+          for f in logs/*.log; do echo "::notice title=$(basename $f)::$(tail -c 1000 $f | tr '\n' ' ')"; done
+          { echo '### Dachrepublik build'; echo '```'; tail -n 40 logs/*.log; echo '```'; } >> $GITHUB_STEP_SUMMARY
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

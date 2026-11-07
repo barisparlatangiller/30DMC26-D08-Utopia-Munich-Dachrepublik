@@ -34,6 +34,7 @@ function simulate() {
   const sim = S.sim, C = sim.cells, R = sim.roofs, nC = C.pop.length, nR = R.net.length;
   const totNet = R.net.reduce((a, b) => a + b, 0), residents = C.pop.reduce((a, b) => a + b, 0);
   const assign = new Int8Array(nR).fill(-1);                    // function index per candidate roof
+  const order = [];                                             // placement order (for the video)
   const covB = {}, covA = {}, out = {};
   const pub = S.F.filter(f => f.id !== "pv");
   // state per public function
@@ -70,7 +71,7 @@ function simulate() {
         s.heap.shift(); insert(s.heap, [g, r]);                   // re-insert with its true gain
       }
       if (pick < 0) { s.done = true; continue; }
-      assign[pick] = s.fi; s.used += R.net[pick]; s.placed++;
+      assign[pick] = s.fi; s.used += R.net[pick]; s.placed++; order.push(pick);
       for (let k = R.start[pick]; k < R.start[pick + 1]; k++) if (S.pd[k] <= s.lim) s.after[S.pc[k]] = 1;
       if (s.placed >= s.need) s.done = true;
     }
@@ -82,10 +83,10 @@ function simulate() {
   const target = residents * P.pv_target_kwh;
   let pvKwh = S.pitched ? kwh(sim.totals.pitched_pv_m2) : 0, pvFlat = 0, pvRoofs = 0;
   const pvBudget = totNet * (S.share.pv || 0) / 100;
-  const order = [...Array(nR).keys()].filter(r => assign[r] < 0 && R.net[r] >= fpv.min_m2).sort((a, b) => R.net[b] - R.net[a]);
-  for (const r of order) {
+  const pvOrder = [...Array(nR).keys()].filter(r => assign[r] < 0 && R.net[r] >= fpv.min_m2).sort((a, b) => R.net[b] - R.net[a]);
+  for (const r of pvOrder) {
     if (pvKwh >= target || pvFlat + R.net[r] > pvBudget) continue;
-    assign[r] = pvi; pvFlat += R.net[r]; pvRoofs++; pvKwh += kwh(R.net[r]);
+    assign[r] = pvi; pvFlat += R.net[r]; pvRoofs++; pvKwh += kwh(R.net[r]); order.push(r);
   }
   // results, people counted once
   let gained = 0, gapB = 0, gapA = 0;
@@ -104,7 +105,7 @@ function simulate() {
   const harvest = (garden ? garden.m2 : 0) * P.grow_share * P.yield_kg_m2;
   const usedRoofs = [...assign].filter(a => a >= 0).length;
   const usedM2 = rows.reduce((a, r) => a + r.m2, 0) + pvFlat;
-  S.assign = assign; S.missB = missB; S.missA = missA;
+  S.assign = assign; S.missB = missB; S.missA = missA; S.order = order;
   S.res = { rows, gained, residents, harvest, people_fed: harvest / P.veg_need_kg, pvKwh, target, pvFlat, pvRoofs,
     usedRoofs, freeRoofs: nR - usedRoofs, usedM2, freeM2: totNet - usedM2, totNet, nR };
   return S.res;
@@ -185,6 +186,11 @@ function paint() {
   for (let c = 0; c < S.missB.length; c++) m.setFeatureState({ source: "cells", id: c }, { b: S.missB[c], a: S.missA[c] });
   m.setPaintProperty("b3", "fill-extrusion-color", roofColor());
   legend();
+}
+// show only the first k placements (used by the video renderer)
+function reveal(k) {
+  const m = S.map, R = S.sim.roofs, on = new Set(S.order.slice(0, k));
+  for (let r = 0; r < R.bid.length; r++) m.setFeatureState({ source: "b", sourceLayer: "b", id: R.bid[r] }, { f: on.has(r) ? S.assign[r] : -1 });
 }
 function roofColor() {
   const ids = S.F.map(f => f.id);

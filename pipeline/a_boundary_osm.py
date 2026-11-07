@@ -14,20 +14,26 @@ import shapely
 from shapely.geometry import LineString, Point, Polygon, shape
 from shapely.ops import polygonize, unary_union
 
-from config import BUILD, WEB, CRS, DISTRICTS, FUNCTIONS, REACH
+from config import IN, BUILD, WEB, CRS, DISTRICTS, FUNCTIONS, REACH
 
 OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
             "https://maps.mail.ru/osm/tools/overpass/api/interpreter"]
 
 
 def overpass(q):
+    """Overpass with retries; answers are cached in input/osm/ (kept between runs by the Actions cache)"""
+    import hashlib
+    cf = IN / "osm" / (hashlib.sha1(q.encode()).hexdigest()[:16] + ".json")
+    if cf.exists():
+        return json.loads(cf.read_text())
+    cf.parent.mkdir(parents=True, exist_ok=True)
     last = None
-    for attempt in range(6):
+    for attempt in range(9):
         url = OVERPASS[attempt % len(OVERPASS)]
         try:
-            r = requests.post(url, data={"data": q}, timeout=600, headers={"User-Agent": "30DMC26-Dachrepublik/1.0"})
+            r = requests.post(url, data={"data": q}, timeout=360, headers={"User-Agent": "30DMC26-Dachrepublik/1.0"})
             if r.status_code == 200 and r.text.lstrip().startswith("{"):
-                return r.json()
+                cf.write_text(r.text); return r.json()
             last = f"{url} → HTTP {r.status_code}"
         except Exception as e:                                             # noqa: BLE001
             last = f"{url} → {e}"

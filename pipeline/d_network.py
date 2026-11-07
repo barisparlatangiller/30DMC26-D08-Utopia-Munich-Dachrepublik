@@ -113,7 +113,7 @@ def main():
         "params": PARAMS, "flat_max_slope": FLAT_MAX_SLOPE, "pv_slope": PV_SLOPE, "pv_azimuth": PV_AZIMUTH,
         "cells": {"pop": cells["pop"].round().astype(int).tolist(), "kids": cells.kids.fillna(0).round().astype(int).tolist(),
                   "base": {k: v.tolist() for k, v in base.items()},
-                  "x": np.round(cells.to_crs(4326).centroid.x, 5).tolist(), "y": np.round(cells.to_crs(4326).centroid.y, 5).tolist()},
+                  "x": np.round(cells.centroid.to_crs(4326).x, 5).tolist(), "y": np.round(cells.centroid.to_crs(4326).y, 5).tolist()},
         "roofs": {"bid": cand.bid.astype(int).tolist(), "net": cand.net.round().astype(int).tolist(),
                   "pvp": cand.pvp_m2.round().astype(int).tolist(), "start": start},
         "totals": {"parts": int(len(b)), "roof_m2": round(float(b.roof_m2.sum())), "flat_m2": round(float(b.flat_m2.sum())),

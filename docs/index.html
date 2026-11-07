@@ -1,1 +1,71 @@
-<!doctype html><title>Die Dachrepublik</title><p>Building…</p>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Die Dachrepublik · Munich</title>
+<meta name="description" content="#30DayMapChallenge 2026 · Day 8 · Utopia. What if the roofs of Munich's city centre belonged to everyone? A 3D simulator that fills roofs with 8 public uses where they are needed.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<link href="style.css?v=1" rel="stylesheet">
+</head>
+<body>
+<div id="map"></div>
+<div class="views" role="group" aria-label="Map view">
+  <button data-v="roofs" class="on">Roofs</button><button data-v="need">Need today</button><button data-v="after">After the Dachrepublik</button>
+</div>
+<div class="legend" id="legend"></div>
+
+<aside class="panel">
+  <div class="eb">#30DayMapChallenge · Day 8 · Utopia · Munich</div>
+  <h1>Die Dachrepublik</h1>
+  <p class="sub">What if the roofs of Munich's city centre belonged to everyone? Share the flat roofs among eight public uses.
+    The simulator puts each use where people within walking distance lack it, and stops once the need is met.
+    Roofs nobody needs stay free.</p>
+
+  <div class="kpis" id="kpis"></div>
+
+  <h2>Share of the flat roofs <span id="sumNote" class="mono"></span></h2>
+  <ul id="sliders"></ul>
+  <div class="row">
+    <button id="reset" class="ghost">Excel defaults</button>
+    <label class="tog"><input id="pitched" type="checkbox" checked> PV on pitched roofs facing E/S/W too</label>
+  </div>
+
+  <h2>What it closes</h2>
+  <table class="matrix" id="matrix"></table>
+
+  <details class="assume">
+    <summary>Assumptions (editable)</summary>
+    <table id="fnParams"></table>
+    <div id="params"></div>
+  </details>
+
+  <details class="method">
+    <summary>Method and limits</summary>
+    <p><b>Area.</b> Munich Stadtbezirke 1–3 (Altstadt-Lehel, Ludwigsvorstadt-Isarvorstadt, Maxvorstadt) from OpenStreetMap.</p>
+    <p><b>Roofs.</b> Bavarian LoD2 building models. Roof faces under 10° slope count as flat and can host the 7 public uses or PV;
+      the usable net area is 75% of the flat area. Pitched faces of 10–60° facing east, south or west can carry PV.</p>
+    <p><b>People.</b> Zensus 2022, 100 m grid (residents; children are the 0–15-year-olds, the closest published group to the Excel's 0–12).</p>
+    <p><b>Access.</b> Walking distances on the OpenStreetMap path network, not straight lines, from every grid cell to the
+      nearest existing facility (playgrounds, pitches, parks, gardens, cinemas, community centres and libraries in OSM)
+      and to every candidate roof.</p>
+    <p><b>Placement.</b> For each use, the number of new sites is capped by the open gap from your Excel
+      (residents ÷ people per site × (1 − already covered)) and by its share of the roof area. Sites go first to the roof that gives
+      the most people new access within the target distance, until the gap is closed or nothing more is gained. PV fills roofs
+      only until the kWh target per resident is met. "People gaining access" counts each person once, however many uses they gain.</p>
+    <p><b>Not a building permit.</b> These are theoretical candidates. Structure, fire safety, ownership and access are not checked.
+      Yields and PV factors are the Excel's model assumptions (GartenLeistungen 5.45 kg/m², 0.65 × 0.2 kWp/m² × 950 kWh/kWp).</p>
+    <p class="fine">Data: Bayerische Vermessungsverwaltung LoD2 (CC BY 4.0) · Destatis Zensus 2022 · © OpenStreetMap contributors (ODbL) ·
+      Basemap © CARTO. Barış Parlatangiller, built with Claude ·
+      <a href="https://github.com/barisparlatangiller/30DMC26-D08-Utopia-Munich-Dachrepublik" target="_blank" rel="noopener">code</a> ·
+      <a href="https://barisparlatangiller.github.io/" target="_blank" rel="noopener">all maps</a></p>
+  </details>
+</aside>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>

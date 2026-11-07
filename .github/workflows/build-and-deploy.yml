@@ -1,6 +1,6 @@
 name: Build Dachrepublik and deploy
 
-# Boundary + OSM → Bayern LoD2 roofs → Zensus 2022 grid → walking distances → web layers → GitHub Pages.
+# Boundary + OSM (Geofabrik) → Bayern LoD2 roofs → Zensus 2022 grid → walking distances → web layers → GitHub Pages.
 on:
   push:
     branches: [main]
@@ -27,7 +27,7 @@ jobs:
           cache: pip
       - name: Install tools
         run: |
-          sudo apt-get update -q && sudo apt-get install -y -q tippecanoe
+          sudo apt-get update -q && sudo apt-get install -y -q tippecanoe osmium-tool
           pip install -r requirements.txt
           mkdir -p logs input build docs/data
       - name: Cache downloads (LoD2 tiles, Zensus grid)
@@ -35,7 +35,7 @@ jobs:
         with:
           path: |
             input/lod2
-            input/osm
+            input/*.pbf
             input/*.zip
           key: munich-centre-v2-${{ github.run_id }}
           restore-keys: munich-centre-

@@ -22,7 +22,7 @@ The model follows the author's Excel (`data/Dachrepublik_Muenchen_8_Function_Sim
 ## Pipeline (GitHub Actions)
 | Step | Script | Data |
 |---|---|---|
-| Boundary, path network, existing facilities | `a_boundary_osm.py` | OpenStreetMap (ODbL): Stadtbezirke 1–3, walkable ways, playgrounds, pitches, parks, gardens, cinemas, community centres, libraries |
+| Boundary, path network, existing facilities | `a_boundary_osm.py` | OpenStreetMap (ODbL), Geofabrik Oberbayern extract cut with osmium: Stadtbezirke 1–3, walkable ways, playgrounds, pitches, parks, gardens, cinemas, community centres, libraries |
 | Roofs | `b_lod2.py` | Bayern LoD2 CityGML, 2 km tiles (CC BY 4.0): roof faces by slope and orientation |
 | People | `c_zensus.py` | Zensus 2022, 100 m grid (Destatis): residents, children 0–15 |
 | Walking distances | `d_network.py` | Distances on the path network from every cell to existing facilities and to every candidate roof (≤ 1.5 km) |
